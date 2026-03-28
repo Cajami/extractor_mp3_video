@@ -22,6 +22,65 @@ El flujo actual hace lo siguiente:
 - actualiza un catalogo en JSON
 - detecta duplicados exactos y similitudes por nombre
 
+## Inicio Rapido
+
+### Requisitos
+
+Antes de usar este proyecto necesitas tener instalado:
+
+- Python 3
+- `pip` para instalar dependencias de Python
+- `ffmpeg`
+- `node`
+
+Notas:
+
+- El proyecto fue probado con Python `3.14.3`
+- `ffmpeg` se usa para convertir el video a MP3
+- `node` se usa como apoyo para `yt-dlp` al trabajar con YouTube
+
+### Instalar Dependencias
+
+Desde la carpeta del proyecto ejecuta:
+
+```powershell
+pip install -r requirements.txt
+python -m pip install -U "yt-dlp[default]"
+```
+
+### Cambiar La Carpeta De Descarga
+
+Por defecto las descargas se guardan en:
+
+```text
+C:\Musica_Boda
+```
+
+Si deseas usar otra carpeta, cambia esta linea en:
+
+- el archivo `youtube_media_downloader.py`, que se encuentra en la carpeta donde descargaste o clonaste este proyecto
+
+```python
+DEFAULT_OUTPUT_DIR = Path(r"C:\Musica_Boda")
+```
+
+### Ejecutar El Script
+
+Para iniciar el descargador interactivo ejecuta:
+
+```powershell
+python youtube_media_downloader.py
+```
+
+Luego el script:
+
+- pedira una URL de YouTube
+- descargara el video
+- generara el MP3
+- actualizara `lista.txt`
+- actualizara `catalogo.json`
+- permitira salir escribiendo `s`
+
 ## Libreria Utilizada
 
 La libreria principal utilizada es:
