@@ -1,21 +1,31 @@
 # Estado Del Proyecto
 
+## Alcance Y Uso Previsto
+
+Este proyecto debe entenderse como una herramienta de automatizacion y aprendizaje para trabajar con contenido propio, con licencia o con permiso expreso.
+
+Disclaimer:
+
+Esta herramienta es solo para contenido sin copyright o con permiso del autor.
+
+El enfoque actual es educativo y tecnico. La documentacion y futuras modificaciones deben evitar presentar el proyecto como una solucion general para descargar musica protegida.
+
 ## Resumen
 
-Este proyecto contiene un descargador interactivo en Python para YouTube que:
+Este proyecto contiene un descargador interactivo en Python para procesar URLs compatibles y:
 
 - descarga el video en `C:\Musica_Boda\video`
 - extrae un MP3 localmente en `C:\Musica_Boda\audio`
 - actualiza `C:\Musica_Boda\lista.txt`
 - mantiene un catalogo en `C:\Musica_Boda\catalogo.json`
 
-El objetivo principal es evitar duplicados, ayudar a detectar similitudes entre canciones, y permitir que cualquier agente pueda retomar el estado sin revisar toda la conversacion previa.
+El objetivo principal es evitar duplicados, ayudar a detectar similitudes entre elementos ya procesados, y permitir que cualquier agente pueda retomar el estado sin revisar toda la conversacion previa.
 
 ## Archivos Del Workspace
 
-- [youtube_media_downloader.py](C:\OneDrive\DESARROLLOS\extractor_mp3\youtube_media_downloader.py): script principal interactivo.
-- [generate_song_list.py](C:\OneDrive\DESARROLLOS\extractor_mp3\generate_song_list.py): genera `lista.txt` a partir de una carpeta raiz o de `audio`.
-- [requirements.txt](C:\OneDrive\DESARROLLOS\extractor_mp3\requirements.txt): dependencia base `yt-dlp>=2026.3.17`.
+- `media_downloader.py`: script principal interactivo.
+- `generate_song_list.py`: genera `lista.txt` a partir de una carpeta raiz o de `audio`.
+- `requirements.txt`: dependencia base `yt-dlp>=2026.3.17`.
 
 ## Ruta De Trabajo Externa
 
@@ -52,7 +62,7 @@ Notas:
 Al ejecutar:
 
 ```powershell
-python C:\OneDrive\DESARROLLOS\extractor_mp3\youtube_media_downloader.py
+python media_downloader.py
 ```
 
 el script:
@@ -60,11 +70,11 @@ el script:
 1. valida dependencias
 2. usa `C:\Musica_Boda` por defecto
 3. si no existe `catalogo.json`, lo reconstruye desde disco
-4. pide un link de YouTube o `s` para salir
-5. consulta el titulo y el ID del video
-6. detecta duplicados exactos por `youtube_id`
+4. pide una URL compatible o `s` para salir
+5. consulta el titulo y el ID del contenido
+6. detecta duplicados exactos usando el identificador unico del contenido cuando ese dato ya existe en el catalogo
 7. detecta similitudes por titulo normalizado
-8. permite vincular una URL nueva a un registro antiguo sin `youtube_id` ni `webpage_url`
+8. permite vincular una URL nueva a un registro antiguo que todavia no tenga sus datos de origen completos en el catalogo
 9. descarga el video
 10. extrae el MP3 localmente desde el video con `ffmpeg`
 11. actualiza `catalogo.json`
@@ -72,20 +82,20 @@ el script:
 
 ## Decisiones Importantes Tomadas
 
-### 1. Una sola descarga desde YouTube
+### 1. Una sola descarga Del Archivo Fuente
 
 Antes se consideraba descargar video y audio por separado. Se cambio a:
 
 - descargar el video una sola vez
 - convertir localmente a MP3 con `ffmpeg`
 
-Esto evita conexiones duplicadas a YouTube y mantiene nombres consistentes entre video y audio.
+Esto evita conexiones duplicadas al origen y mantiene nombres consistentes entre video y audio.
 
 ### 2. Catalogo Persistente
 
 Se introdujo `catalogo.json` para guardar:
 
-- `youtube_id`
+- `id`
 - `title`
 - `webpage_url`
 - `video_file`
@@ -94,7 +104,7 @@ Se introdujo `catalogo.json` para guardar:
 
 Si un registro fue reconstruido desde disco y no desde una URL real, puede quedar con:
 
-- `youtube_id: null`
+- `id: null`
 - `webpage_url: null`
 - `source: "local_scan"`
 
@@ -103,21 +113,21 @@ Si un registro fue reconstruido desde disco y no desde una URL real, puede queda
 Se agrego un modo de reconstruccion:
 
 ```powershell
-python C:\OneDrive\DESARROLLOS\extractor_mp3\youtube_media_downloader.py --output-dir "C:\Musica_Boda" --rebuild-catalog
+python media_downloader.py --output-dir "C:\Musica_Boda" --rebuild-catalog
 ```
 
 Ese modo:
 
 - reconstruye `catalogo.json` desde `audio` y `video`
-- intenta recuperar `youtube_id` desde nombres tipo `Titulo [ID].ext`
-- deja `youtube_id` y `webpage_url` en `null` si no puede inferirlos
+- intenta recuperar el identificador desde nombres tipo `Titulo [ID].ext`
+- deja `id` y `webpage_url` en `null` si no puede inferirlos
 
-### 4. Vinculacion Sin Redescarga
+### 4. Vinculacion Sin Reprocesar El Archivo
 
-Si el usuario pega una URL de un video ya descargado pero cuya entrada viene de `local_scan`:
+Si el usuario pega una URL de un contenido ya descargado pero cuya entrada viene de `local_scan`:
 
 - el script puede detectar similitud alta
-- ofrecer vincular el `youtube_id` y la `webpage_url`
+- ofrecer vincular el identificador y la URL de origen
 - guardar esos datos sin necesidad de descargar otra vez
 
 ### 5. Deteccion De Similitud
@@ -191,24 +201,24 @@ El MP3 se genera desde el video ya descargado, usando:
 Ejecutar el descargador interactivo:
 
 ```powershell
-python C:\OneDrive\DESARROLLOS\extractor_mp3\youtube_media_downloader.py
+python media_downloader.py
 ```
 
 Reconstruir catalogo desde archivos existentes:
 
 ```powershell
-python C:\OneDrive\DESARROLLOS\extractor_mp3\youtube_media_downloader.py --output-dir "C:\Musica_Boda" --rebuild-catalog
+python media_downloader.py --output-dir "C:\Musica_Boda" --rebuild-catalog
 ```
 
 Regenerar solo la lista desde la carpeta raiz:
 
 ```powershell
-python C:\OneDrive\DESARROLLOS\extractor_mp3\generate_song_list.py "C:\Musica_Boda"
+python generate_song_list.py "C:\Musica_Boda"
 ```
 
 ## Riesgos O Pendientes
 
-- Los registros antiguos sin `youtube_id` solo pueden enriquecerse si el usuario vuelve a pegar la URL.
+- Los registros antiguos sin identificador solo pueden enriquecerse si el usuario vuelve a pegar la URL.
 - No se agrego barra de progreso personalizada porque `yt-dlp` ya muestra progreso suficiente y se prefirio no recargar la consola.
 - El proyecto no tiene tests automatizados; la validacion realizada fue principalmente por sintaxis, ejecucion de comandos y uso real del usuario.
 

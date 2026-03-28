@@ -21,7 +21,7 @@ ANSI_RED = "\033[91m"
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Descarga videos y MP3 de YouTube en C:\\Musica_Boda."
+        description="Descarga contenido multimedia autorizado en C:\\Musica_Boda."
     )
     parser.add_argument(
         "--output-dir",
@@ -70,7 +70,7 @@ def ensure_dependencies() -> None:
 
     if shutil.which("node") is None:
         print(
-            "No se encontro node en el PATH. Instalarlo ayuda a evitar advertencias y mejora la extraccion en YouTube.",
+            "No se encontro node en el PATH. Instalarlo ayuda a evitar advertencias y mejora la extraccion del contenido.",
             file=sys.stderr,
         )
 
@@ -162,9 +162,9 @@ def save_catalog(catalog_path: Path, entries: list[dict]) -> None:
     )
 
 
-def find_existing_by_id(entries: list[dict], youtube_id: str) -> tuple[int, dict] | None:
+def find_existing_by_id(entries: list[dict], content_id: str) -> tuple[int, dict] | None:
     for index, entry in enumerate(entries, start=1):
-        if entry.get("youtube_id") == youtube_id:
+        if entry.get("id") == content_id:
             return index, entry
     return None
 
@@ -203,10 +203,10 @@ def prompt_yes_no(message: str) -> bool:
 
 
 def parse_title_and_id_from_stem(stem: str) -> tuple[str, str | None]:
-    match = re.match(r"^(?P<title>.+?)\s+\[(?P<youtube_id>[A-Za-z0-9_-]{6,})\]$", stem)
+    match = re.match(r"^(?P<title>.+?)\s+\[(?P<id>[A-Za-z0-9_-]{6,})\]$", stem)
     if not match:
         return stem, None
-    return match.group("title").strip(), match.group("youtube_id").strip()
+    return match.group("title").strip(), match.group("id").strip()
 
 
 def extract_video_info(url: str) -> dict:
@@ -273,8 +273,8 @@ def convert_video_to_mp3(video_path: Path, audio_dir: Path, audio_quality: str) 
     return output_path
 
 
-def cleanup_partial_files(base_dir: Path, youtube_id: str | None) -> list[Path]:
-    if not youtube_id:
+def cleanup_partial_files(base_dir: Path, content_id: str | None) -> list[Path]:
+    if not content_id:
         return []
 
     removed_files: list[Path] = []
@@ -283,7 +283,7 @@ def cleanup_partial_files(base_dir: Path, youtube_id: str | None) -> list[Path]:
             continue
         if path.suffix.lower() != ".part":
             continue
-        if f"[{youtube_id}]" not in path.name:
+        if f"[{content_id}]" not in path.name:
             continue
         path.unlink(missing_ok=True)
         removed_files.append(path)
@@ -307,12 +307,12 @@ def rebuild_catalog_from_disk(base_dir: Path) -> list[dict]:
 
     if audio_dir.exists():
         for audio_path in sorted(audio_dir.glob("*.mp3")):
-            title, youtube_id = parse_title_and_id_from_stem(audio_path.stem)
-            key = youtube_id or normalize_title(title) or audio_path.stem.lower()
+            title, content_id = parse_title_and_id_from_stem(audio_path.stem)
+            key = content_id or normalize_title(title) or audio_path.stem.lower()
             entry = entries_by_key.setdefault(
                 key,
                 {
-                    "youtube_id": youtube_id,
+                    "id": content_id,
                     "title": title,
                     "webpage_url": None,
                     "video_file": None,
@@ -323,18 +323,18 @@ def rebuild_catalog_from_disk(base_dir: Path) -> list[dict]:
             )
             entry["audio_file"] = audio_path.name
             entry["title"] = title
-            entry["youtube_id"] = youtube_id or entry.get("youtube_id")
+            entry["id"] = content_id or entry.get("id")
 
     if video_dir.exists():
         for video_path in sorted(video_dir.glob("*.*")):
             if video_path.suffix.lower() not in {".mp4", ".mkv", ".webm", ".mov", ".avi"}:
                 continue
-            title, youtube_id = parse_title_and_id_from_stem(video_path.stem)
-            key = youtube_id or normalize_title(title) or video_path.stem.lower()
+            title, content_id = parse_title_and_id_from_stem(video_path.stem)
+            key = content_id or normalize_title(title) or video_path.stem.lower()
             entry = entries_by_key.setdefault(
                 key,
                 {
-                    "youtube_id": youtube_id,
+                    "id": content_id,
                     "title": title,
                     "webpage_url": None,
                     "video_file": None,
@@ -345,7 +345,7 @@ def rebuild_catalog_from_disk(base_dir: Path) -> list[dict]:
             )
             entry["video_file"] = video_path.name
             entry["title"] = title
-            entry["youtube_id"] = youtube_id or entry.get("youtube_id")
+            entry["id"] = content_id or entry.get("id")
 
     entries = list(entries_by_key.values())
     entries.sort(key=lambda item: (item.get("title") or "").lower())
@@ -354,7 +354,7 @@ def rebuild_catalog_from_disk(base_dir: Path) -> list[dict]:
 
 def prompt_for_url() -> str | None:
     print()
-    typed_url = input("Pega un link de YouTube o presiona 's' para salir: ").strip()
+    typed_url = input("Pega una URL compatible o presiona 's' para salir: ").strip()
     if not typed_url:
         return None
     if typed_url.lower() in {"s", "salir", "exit", "q"}:
@@ -364,15 +364,15 @@ def prompt_for_url() -> str | None:
 
 def show_title_checks(info: dict, entries: list[dict]) -> bool:
     title = info.get("title", "Sin titulo")
-    youtube_id = info.get("id", "")
+    content_id = info.get("id", "")
     print(f"Titulo detectado: {title}")
-    print(f"ID detectado: {youtube_id}")
+    print(f"ID detectado: {content_id}")
 
-    existing = find_existing_by_id(entries, youtube_id)
+    existing = find_existing_by_id(entries, content_id)
     if existing:
         index, entry = existing
         print()
-        print(f"Este video ya fue descargado exactamente y aparece en la lista con el nro {index}.")
+        print(f"Este contenido ya fue descargado exactamente y aparece en la lista con el nro {index}.")
         print(f"Titulo existente: {entry.get('title', 'Sin titulo')}")
         return prompt_yes_no("Deseas descargarlo nuevamente?")
 
@@ -384,13 +384,13 @@ def show_title_checks(info: dict, entries: list[dict]) -> bool:
         for index, entry, score in similar_entries:
             percentage = round(score * 100, 1)
             print(f"  {index}. {entry.get('title', 'Sin titulo')} ({percentage}% similitud)")
-        return prompt_yes_no("Deseas descargar este video de todas formas?")
+        return prompt_yes_no("Deseas descargar este contenido de todas formas?")
 
     return True
 
 
 def enrich_existing_entry(entry: dict, info: dict) -> dict:
-    entry["youtube_id"] = info.get("id")
+    entry["id"] = info.get("id")
     entry["webpage_url"] = info.get("webpage_url")
     if not entry.get("title"):
         entry["title"] = info.get("title")
@@ -404,12 +404,12 @@ def offer_link_existing_entry(entries: list[dict], info: dict) -> tuple[list[dic
         return entries, False
 
     top_index, top_entry, top_score = similar_entries[0]
-    if top_entry.get("youtube_id") or top_score < 0.9:
+    if top_entry.get("id") or top_score < 0.9:
         return entries, False
 
     print()
     print(
-        f"Parece que el video corresponde a un registro previo sin ID ni URL en la posicion {top_index}:"
+        f"Parece que el contenido corresponde a un registro previo sin ID ni URL en la posicion {top_index}:"
     )
     print(f"  {top_entry.get('title', 'Sin titulo')}")
     if prompt_yes_no("Deseas vincular esta URL a ese registro existente?"):
@@ -421,7 +421,7 @@ def offer_link_existing_entry(entries: list[dict], info: dict) -> tuple[list[dic
 
 def append_or_update_catalog(entries: list[dict], info: dict, video_path: Path, audio_path: Path) -> list[dict]:
     new_entry = {
-        "youtube_id": info.get("id"),
+        "id": info.get("id"),
         "title": info.get("title"),
         "webpage_url": info.get("webpage_url"),
         "video_file": video_path.name,
@@ -474,13 +474,13 @@ def run_download_cycle(base_dir: Path, name_template: str, audio_quality: str, k
         try:
             info = extract_video_info(url)
         except Exception as exc:
-            print_error(f"No pude leer la informacion del video: {exc}")
+            print_error(f"No pude leer la informacion del contenido: {exc}")
             continue
 
         entries, linked_existing = offer_link_existing_entry(entries, info)
         if linked_existing:
             save_catalog(catalog_file, entries)
-            if not prompt_yes_no("Deseas descargar este video ahora?"):
+            if not prompt_yes_no("Deseas descargar este contenido ahora?"):
                 print("Se guardo la URL en el catalogo y se omitio la descarga.")
                 continue
 
@@ -518,7 +518,7 @@ def run_download_cycle(base_dir: Path, name_template: str, audio_quality: str, k
             continue
 
         print("Descarga completada.")
-        print(f"Video guardado en: {video_path}")
+        print(f"Archivo multimedia guardado en: {video_path}")
         print(f"Audio guardado en: {audio_path}")
         print(f"Lista actualizada en: {list_file}")
 
