@@ -45,8 +45,8 @@ Notas:
 Desde la carpeta del proyecto ejecuta:
 
 ```powershell
-pip install -r requirements.txt
-python -m pip install -U "yt-dlp[default]"
+py -m pip install -r requirements.txt
+py -m pip install -U "yt-dlp[default]"
 ```
 
 ### Cambiar La Carpeta De Descarga
@@ -70,7 +70,7 @@ DEFAULT_OUTPUT_DIR = Path(r"C:\Musica_Boda")
 Para iniciar el script interactivo ejecuta:
 
 ```powershell
-python media_downloader.py
+py media_downloader.py
 ```
 
 Luego el script:
@@ -81,6 +81,61 @@ Luego el script:
 - actualizara `lista.txt`
 - actualizara `catalogo.json`
 - permitira salir escribiendo `s`
+
+### Si YouTube Pide Verificacion O Cookies
+
+Algunas URLs de YouTube pueden devolver mensajes como:
+
+- `Sign in to confirm you're not a bot`
+
+Esto puede pasar por cambios recientes de YouTube en sus controles de acceso y anti-bot. Cuando ocurra, el proyecto puede necesitar cookies validas de una sesion iniciada.
+
+En ese caso, reintenta importando cookies desde tu navegador:
+
+```powershell
+py media_downloader.py --cookies-from-browser edge
+```
+
+Tambien puedes usar otros navegadores compatibles:
+
+- `chrome`
+- `brave`
+- `firefox`
+
+Si ya exportaste un archivo de cookies en formato Netscape, puedes usar:
+
+```powershell
+py media_downloader.py --cookies-file "C:\ruta\cookies.txt"
+```
+
+Nota:
+
+- el navegador elegido debe tener una sesion valida iniciada para YouTube
+- si aun asi falla, vuelve a exportar cookies frescas o prueba otra URL
+
+### Uso Recomendado Con `cookies.txt`
+
+En Windows, si `yt-dlp` no logra leer directamente la base de cookies de Chrome, la forma mas estable es exportarlas manualmente a un archivo `cookies.txt` en formato Netscape.
+
+Pasos recomendados:
+
+1. Inicia sesion en YouTube desde Chrome.
+2. Abre `youtube.com`.
+3. Exporta las cookies en formato Netscape con tu extension.
+4. Guarda o pega el contenido en un archivo llamado `cookies.txt`.
+5. Coloca ese archivo en la misma carpeta que `media_downloader.py`.
+
+Si `cookies.txt` existe junto al script, el proyecto lo detecta automaticamente al iniciar. En ese caso, puedes seguir ejecutando solo:
+
+```powershell
+py media_downloader.py
+```
+
+Notas importantes:
+
+- no conviene versionar ni compartir `cookies.txt`, porque contiene datos sensibles de sesion
+- si vuelve a aparecer un error de autenticacion, normalmente basta con exportar un `cookies.txt` nuevo y reemplazar el anterior
+- no hay un tiempo fijo de validez; puede durar dias o semanas segun YouTube y el estado de tu sesion
 
 ## Libreria Utilizada
 
@@ -187,7 +242,7 @@ Si se desea usar otra carpeta, se puede cambiar esa linea por otra ruta.
 Ejecutar el script principal:
 
 ```powershell
-python media_downloader.py
+py media_downloader.py
 ```
 
 El script:

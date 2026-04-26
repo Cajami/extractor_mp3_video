@@ -1,0 +1,75 @@
+INICIO RAPIDO - EXTRACTOR MP3
+
+1. Ejecutar el script
+
+   py media_downloader.py
+
+2. Pegar una URL compatible cuando la consola lo pida
+
+3. Esperar a que termine la descarga y la conversion a MP3
+
+
+SI YOUTUBE PIDE COOKIES O AUTENTICACION
+
+Este proyecto puede usar automaticamente un archivo llamado:
+
+   cookies.txt
+
+Ese archivo debe estar en esta misma carpeta, junto a:
+
+   media_downloader.py
+
+Si el archivo existe, el script lo detecta solo.
+No hace falta usar flags adicionales.
+
+
+COMO GENERAR cookies.txt
+
+1. Abrir Chrome
+2. Iniciar sesion en YouTube
+3. Abrir youtube.com
+4. Usar la extension del navegador para exportar cookies
+5. Elegir formato Netscape
+6. Guardar o pegar el contenido en:
+
+   cookies.txt
+
+
+CUANDO HAY QUE RENOVAR cookies.txt
+
+No hay un tiempo fijo.
+Depende de cuando YouTube invalide la sesion o algunas cookies.
+
+Regla practica:
+
+- si el script sigue funcionando, no cambies nada
+- si vuelve a aparecer un error de autenticacion o cookies, exporta un cookies.txt nuevo
+- si cerraste sesion en YouTube o cambiaste la clave, probablemente toque exportarlo otra vez
+- si pasan varios dias o semanas y vuelve el bloqueo, renuevalo
+
+
+SENALES DE QUE YA NO SIRVE
+
+Si ves mensajes como estos:
+
+- Sign in to confirm you're not a bot
+- cookies/authentication
+- error leyendo informacion del contenido
+
+entonces vuelve a exportar cookies.txt desde Chrome.
+
+
+RECOMENDACION
+
+Cuando exportes cookies:
+
+- hazlo con YouTube ya abierto
+- asegúrate de estar logueado
+- reemplaza el contenido anterior de cookies.txt
+
+
+COMANDO RECOMENDADO
+
+   py media_downloader.py
+
+Solo usa --cookies-file si quieres apuntar a otro archivo distinto.

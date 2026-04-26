@@ -13,6 +13,7 @@ from pathlib import Path
 
 DEFAULT_OUTPUT_DIR = Path(r"C:\Musica_Boda")
 CATALOG_FILE_NAME = "catalogo.json"
+DEFAULT_COOKIES_FILE_NAME = "cookies.txt"
 SIMILARITY_THRESHOLD = 0.76
 ANSI_RESET = "\033[0m"
 ANSI_CYAN = "\033[96m"
@@ -47,6 +48,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--rebuild-catalog",
         action="store_true",
         help="Reconstruye catalogo.json desde los archivos ya existentes y termina.",
+    )
+    parser.add_argument(
+        "--cookies-from-browser",
+        help=(
+            "Importa cookies directamente desde el navegador para ayudar con sitios que exigen autenticacion. "
+            "Ejemplos: chrome, chrome:Default, edge, brave."
+        ),
+    )
+    parser.add_argument(
+        "--cookies-file",
+        help="Ruta a un archivo de cookies exportado en formato Netscape para usarlo con yt-dlp.",
     )
     return parser
 
@@ -103,12 +115,28 @@ def sanitize_path(path_text: str) -> Path:
     return Path(path_text).expanduser().resolve()
 
 
+def find_default_cookies_file() -> Path | None:
+    candidate = (Path(__file__).resolve().parent / DEFAULT_COOKIES_FILE_NAME)
+    if candidate.exists() and candidate.is_file():
+        return candidate
+    return None
+
+
 def build_yt_dlp_base_options() -> dict:
     node_path = shutil.which("node")
     options: dict = {}
     if node_path:
         options["extractor_args"] = {"youtube": {"player_client": ["default"]}}
         options["js_runtimes"] = {"node": {"path": node_path}}
+    return options
+
+
+def add_cookie_options(options: dict, cookies_from_browser: str | None, cookies_file: Path | None) -> dict:
+    if cookies_from_browser:
+        browser_spec = [part.strip() for part in cookies_from_browser.split(":") if part.strip()]
+        options["cookiesfrombrowser"] = tuple(browser_spec)
+    if cookies_file:
+        options["cookiefile"] = str(cookies_file)
     return options
 
 
@@ -209,16 +237,28 @@ def parse_title_and_id_from_stem(stem: str) -> tuple[str, str | None]:
     return match.group("title").strip(), match.group("id").strip()
 
 
-def extract_video_info(url: str) -> dict:
+def extract_video_info(
+    url: str,
+    cookies_from_browser: str | None = None,
+    cookies_file: Path | None = None,
+) -> dict:
     from yt_dlp import YoutubeDL
 
     ydl_opts = {"noplaylist": True, "quiet": True, "skip_download": True}
     ydl_opts.update(build_yt_dlp_base_options())
+    add_cookie_options(ydl_opts, cookies_from_browser, cookies_file)
     with YoutubeDL(ydl_opts) as ydl:
         return ydl.extract_info(url, download=False)
 
 
-def download_video(info: dict, video_dir: Path, name_template: str, keep_thumbnail: bool) -> Path:
+def download_video(
+    info: dict,
+    video_dir: Path,
+    name_template: str,
+    keep_thumbnail: bool,
+    cookies_from_browser: str | None = None,
+    cookies_file: Path | None = None,
+) -> Path:
     from yt_dlp import YoutubeDL
 
     video_dir.mkdir(parents=True, exist_ok=True)
@@ -233,6 +273,7 @@ def download_video(info: dict, video_dir: Path, name_template: str, keep_thumbna
         "ffmpeg_location": str(ffmpeg_bin) if ffmpeg_bin else None,
     }
     ydl_opts.update(build_yt_dlp_base_options())
+    add_cookie_options(ydl_opts, cookies_from_browser, cookies_file)
 
     with YoutubeDL(ydl_opts) as ydl:
         result = ydl.extract_info(info["webpage_url"], download=True)
@@ -289,6 +330,37 @@ def cleanup_partial_files(base_dir: Path, content_id: str | None) -> list[Path]:
         removed_files.append(path)
 
     return removed_files
+
+
+def explain_yt_error(exc: Exception, cookies_from_browser: str | None, cookies_file: Path | None) -> str:
+    message = str(exc)
+    lower_message = message.lower()
+    if "sign in to confirm you're not a bot" in lower_message:
+        if cookies_from_browser or cookies_file:
+            return (
+                "YouTube sigue rechazando la solicitud incluso usando cookies. "
+                "Proba iniciar sesion en el navegador elegido, exportar cookies frescas o usar otra URL."
+            )
+        return (
+            "YouTube esta exigiendo autenticacion anti-bot para esa URL. "
+            "Volve a ejecutar el script usando, por ejemplo: "
+            "py media_downloader.py --cookies-from-browser edge "
+            "o bien --cookies-file RUTA_AL_ARCHIVO_DE_COOKIES."
+        )
+    if "cookies" in lower_message and "youtube" in lower_message:
+        return (
+            "La fuente esta pidiendo cookies/autenticacion. "
+            "Reintenta con --cookies-from-browser edge, chrome o brave, "
+            "o con --cookies-file si ya exportaste las cookies."
+        )
+    if "could not copy chrome cookie database" in lower_message:
+        return (
+            "No se pudo copiar la base de cookies de Chrome. "
+            "Cierra completamente Chrome, verifica en el Administrador de tareas que no queden procesos chrome.exe "
+            "y reintenta con --cookies-from-browser chrome:Default. "
+            "Si sigue fallando, exporta un cookies.txt y usalo con --cookies-file, o dejalo junto a media_downloader.py."
+        )
+    return f"No pude leer la informacion del contenido: {exc}"
 
 
 def build_song_list(audio_dir: Path, output_file: Path) -> None:
@@ -440,7 +512,14 @@ def append_or_update_catalog(entries: list[dict], info: dict, video_path: Path, 
     return entries
 
 
-def run_download_cycle(base_dir: Path, name_template: str, audio_quality: str, keep_thumbnail: bool) -> None:
+def run_download_cycle(
+    base_dir: Path,
+    name_template: str,
+    audio_quality: str,
+    keep_thumbnail: bool,
+    cookies_from_browser: str | None,
+    cookies_file: Path | None,
+) -> None:
     video_dir = base_dir / "video"
     audio_dir = base_dir / "audio"
     list_file = base_dir / "lista.txt"
@@ -472,9 +551,13 @@ def run_download_cycle(base_dir: Path, name_template: str, audio_quality: str, k
         entries = load_catalog(catalog_file)
 
         try:
-            info = extract_video_info(url)
+            info = extract_video_info(
+                url=url,
+                cookies_from_browser=cookies_from_browser,
+                cookies_file=cookies_file,
+            )
         except Exception as exc:
-            print_error(f"No pude leer la informacion del contenido: {exc}")
+            print_error(explain_yt_error(exc, cookies_from_browser, cookies_file))
             continue
 
         entries, linked_existing = offer_link_existing_entry(entries, info)
@@ -494,6 +577,8 @@ def run_download_cycle(base_dir: Path, name_template: str, audio_quality: str, k
                 video_dir=video_dir,
                 name_template=name_template,
                 keep_thumbnail=keep_thumbnail,
+                cookies_from_browser=cookies_from_browser,
+                cookies_file=cookies_file,
             )
             audio_path = convert_video_to_mp3(
                 video_path=video_path,
@@ -530,6 +615,10 @@ def main() -> None:
     ensure_dependencies()
     base_dir = sanitize_path(args.output_dir)
     base_dir.mkdir(parents=True, exist_ok=True)
+    cookies_file = sanitize_path(args.cookies_file) if args.cookies_file else find_default_cookies_file()
+
+    if cookies_file and not args.cookies_file:
+        print(f"Usando archivo de cookies detectado automaticamente: {cookies_file}")
 
     if args.rebuild_catalog:
         catalog_file = base_dir / CATALOG_FILE_NAME
@@ -545,6 +634,8 @@ def main() -> None:
         name_template=args.name_template,
         audio_quality=args.audio_quality,
         keep_thumbnail=args.keep_thumbnail,
+        cookies_from_browser=args.cookies_from_browser,
+        cookies_file=cookies_file,
     )
 
 

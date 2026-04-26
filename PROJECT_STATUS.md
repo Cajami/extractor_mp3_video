@@ -26,6 +26,7 @@ El objetivo principal es evitar duplicados, ayudar a detectar similitudes entre 
 - `media_downloader.py`: script principal interactivo.
 - `generate_song_list.py`: genera `lista.txt` a partir de una carpeta raiz o de `audio`.
 - `requirements.txt`: dependencia base `yt-dlp>=2026.3.17`.
+- `leeme_inicio_rapido.txt`: guia resumida de uso y de renovacion de cookies.
 
 ## Ruta De Trabajo Externa
 
@@ -62,7 +63,7 @@ Notas:
 Al ejecutar:
 
 ```powershell
-python media_downloader.py
+py media_downloader.py
 ```
 
 el script:
@@ -79,6 +80,8 @@ el script:
 10. extrae el MP3 localmente desde el video con `ffmpeg`
 11. actualiza `catalogo.json`
 12. regenera `lista.txt`
+
+Si existe un archivo `cookies.txt` junto a `media_downloader.py`, el script lo detecta y lo usa automaticamente para `yt-dlp`.
 
 ## Decisiones Importantes Tomadas
 
@@ -168,6 +171,24 @@ La generacion actual usa:
 002. Nombre de cancion
 ```
 
+### 8. Flujo De Cookies En Windows
+
+Se agrego soporte para:
+
+- `--cookies-from-browser`
+- `--cookies-file`
+- autodeteccion de `cookies.txt` en la misma carpeta del script
+
+Este cambio se hizo porque YouTube ahora puede exigir autenticacion o cookies validas en mas casos que antes.
+
+En la practica, el flujo mas estable para YouTube en Windows es:
+
+- exportar cookies desde Chrome en formato Netscape
+- guardarlas como `cookies.txt` junto a `media_downloader.py`
+- ejecutar normalmente `py media_downloader.py`
+
+No se debe subir `cookies.txt` al repositorio porque contiene datos sensibles de sesion.
+
 ## Detalles Funcionales Del Script Principal
 
 ### Nombre De Archivo
@@ -201,7 +222,13 @@ El MP3 se genera desde el video ya descargado, usando:
 Ejecutar el descargador interactivo:
 
 ```powershell
-python media_downloader.py
+py media_downloader.py
+```
+
+Ejecutar usando un archivo de cookies especifico:
+
+```powershell
+py media_downloader.py --cookies-file "C:\ruta\cookies.txt"
 ```
 
 Reconstruir catalogo desde archivos existentes:
@@ -221,10 +248,12 @@ python generate_song_list.py "C:\Musica_Boda"
 - Los registros antiguos sin identificador solo pueden enriquecerse si el usuario vuelve a pegar la URL.
 - No se agrego barra de progreso personalizada porque `yt-dlp` ya muestra progreso suficiente y se prefirio no recargar la consola.
 - El proyecto no tiene tests automatizados; la validacion realizada fue principalmente por sintaxis, ejecucion de comandos y uso real del usuario.
+- Las cookies de YouTube no tienen un tiempo fijo de validez; cuando vuelven errores de autenticacion, normalmente hay que regenerar `cookies.txt`.
 
 ## Recomendaciones Para El Siguiente Agente
 
 - No cambiar la ruta por defecto `C:\Musica_Boda` salvo pedido explicito del usuario.
 - No eliminar ni reordenar manualmente `lista.txt` ni `catalogo.json` sin confirmar con el usuario.
+- No subir `cookies.txt` ni otros archivos sensibles al repositorio.
 - Si vuelven warnings de YouTube/EJS, revisar la configuracion de `node`, `yt-dlp-ejs` y la wiki oficial de `yt-dlp`.
 - Si se necesita mejorar mas la similitud, partir de `normalize_title`, `split_title_tokens` y `find_similar_entries`.
